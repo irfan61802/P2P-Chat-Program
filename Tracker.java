@@ -65,9 +65,8 @@ public class Tracker {
             if(received.equals("disconnect")){
                 peers.remove(ipAddress);
             }
-            else{
-                sendToAll(ipAddress, port);
-            }
+            sendToAll(ipAddress, port);
+            
 
             //print out the current list of peers
             for (InetAddress key : peers.keySet())
