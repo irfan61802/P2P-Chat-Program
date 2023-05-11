@@ -45,7 +45,6 @@ public class Tracker {
         serverSocket = new DatagramSocket(1234);
 
         while(true){
-            System.out.println("Waiting for Clients on Port 1234...");
             
             //create packet to receive data
             DatagramPacket receivePacket = new DatagramPacket(new byte[1024], 1024);
@@ -55,17 +54,24 @@ public class Tracker {
             InetAddress ipAddress = receivePacket.getAddress();
             int port = receivePacket.getPort();
             String ip = ipAddress.toString();
-            peers.put(ipAddress,port);        //saving client info to hashMap
-            String received = new String(receivePacket.getData(), 0, receivePacket.getLength());
-            
-            //print when new client connected
-            System.out.println("RECEIVED: " + ip + ":" + port + "\nmessage:" +received);
+            if(!peers.containsKey(ipAddress)){
+                peers.put(ipAddress,port);        //saving client info to hashMap
+                sendToAll(ipAddress, port);
+            }
 
-            
+            String received = new String(receivePacket.getData(), 0, receivePacket.getLength());
+
             if(received.equals("disconnect")){
                 peers.remove(ipAddress);
+            } else if (received.startsWith("MESSAGE:")) {
+                // Message received from client
+                String message = received.substring("MESSAGE:".length());
+                System.out.println("Received message from " + ip + ":" + port + ": " + message);
+                byte[] buffer = message.getBytes();
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, InetAddress.getByName("localhost"), peers.get(InetAddress.getByName("localhost")));
+                serverSocket.send(packet);
+                // Handle the message as needed
             }
-            sendToAll(ipAddress, port);
             
 
             //print out the current list of peers

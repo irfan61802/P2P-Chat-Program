@@ -2,12 +2,14 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 
+import java.awt.event.*;
 class Peer{
 
     private DatagramSocket socket;
     private InetAddress address;
     private byte[] buf;
     public HashMap<InetAddress, Integer> peers = new HashMap<InetAddress, Integer>();
+    private Gui gui;
 
     public Peer() throws IOException{
         socket = new DatagramSocket();
@@ -47,6 +49,50 @@ class Peer{
         {
             System.out.println(key.getHostAddress()+":"+myClient.peers.get(key));
 
+        }
+        new Thread(new PeerListener(myClient)).start();
+        myClient.gui = new Gui();
+
+        // Add a listener for the Send button
+        myClient.gui.addSendButtonListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    String message = "MESSAGE:"+myClient.gui.getMessage();
+                    byte[] buffer = message.getBytes();
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, myClient.address, 1234);
+                    myClient.socket.send(packet);
+                    myClient.gui.clearMessage();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+    }
+
+    //Listen for when tracker sends message
+    static class PeerListener implements Runnable {
+        private Peer peer;
+
+        public PeerListener(Peer peer) {
+            this.peer = peer;
+        }
+
+        public void run() {
+            try {
+                while(true){
+                    DatagramPacket receivePacket = new DatagramPacket(new byte[1024], 1024);
+                    peer.socket.receive(receivePacket);
+                    String received = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                    peer.gui.addMessage(received);
+                    System.out.println(received);
+                }
+                    
+            } catch (Exception e) {
+                    System.out.println("Connection closed: " + e.getMessage());
+            } finally {
+                    
+            }
         }
     }
 
