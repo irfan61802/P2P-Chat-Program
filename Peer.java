@@ -65,6 +65,8 @@ class Peer{
         Peer myClient = new Peer();
         new Thread(new PeerListener(myClient)).start();
         myClient.gui = new Gui();
+        myClient.gui.addMessage("Please enter a username: ");
+    
         // Add a listener for the Send button
         myClient.gui.addSendButtonListener(new ActionListener() {
             private boolean isFirstMessage = true;
