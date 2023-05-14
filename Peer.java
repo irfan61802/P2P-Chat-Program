@@ -31,7 +31,7 @@ class Peer{
 
     public void leaveChat() throws IOException {
         //send packet to tracker
-        String msg="disconnect";
+        String msg="disconnect"+username;
         buf = msg.getBytes();
         DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 1234);
         socket.send(packet);
@@ -46,7 +46,7 @@ class Peer{
             try {
                 socket.send(packet);
             } catch (Exception e) {
-                // TODO: handle exception
+                e.printStackTrace();
             }
         }
     }
@@ -65,7 +65,6 @@ class Peer{
         Peer myClient = new Peer();
         new Thread(new PeerListener(myClient)).start();
         myClient.gui = new Gui();
-    
         // Add a listener for the Send button
         myClient.gui.addSendButtonListener(new ActionListener() {
             private boolean isFirstMessage = true;
@@ -116,24 +115,50 @@ class Peer{
                     // Check for packet prefixes
                     // Handle member list updating
                     if (received.startsWith("CONNECT:")) {
-                        String peersList = received.substring("CONNECT:".length());
+                        String peerConn = received.substring("CONNECT:".length());
                         System.out.println("Handling Connect");
                         //receive packet and return
-                        String[] peerStrings = peersList.split(",");
-                        peer.users.clear();
-                        peer.peers.clear();
-                        for(int i=0;i<peerStrings.length;i++){
-                            InetSocketAddress ipPort = new InetSocketAddress(InetAddress.getByName(peerStrings[i].split(":")[0]),Integer.parseInt(peerStrings[i].split(":")[1]));
-                            peer.peers.put(ipPort,peerStrings[i].split(":")[2]);
-                            peer.users.add(ipPort);
-                        }
-                        peer.gui.setMembers(new ArrayList<>(peer.peers.values()));
+                        //Serialize packet
+                        String hostname = peerConn.split(":")[0];
+                        int port = Integer.parseInt(peerConn.split(":")[1]);
+                        String username = peerConn.split(":")[2];
+                        InetSocketAddress ipPort = new InetSocketAddress(InetAddress.getByName(hostname),port);
+                        //Store information in hashmap
+                        peer.peers.put(ipPort,username);
+                        peer.users.add(ipPort);
+                        peer.gui.addMember(username);
+                    
                     // Handle messages
                     } else if (received.startsWith("MESSAGE:")) {
                         String message = received.substring("MESSAGE:".length());
                         String time = dateFormat(message.substring(0, 13));
                         peer.gui.addMessage(time +" - "+ message.substring(13));
                         System.out.println(received);
+                    //Handle initial connections
+                    } else if (received.startsWith("INITIAL:")){
+                        String peersList = received.substring("INITIAL:".length());
+                        System.out.println("Handling INITIAL");
+                        //receive packet and return
+                        String[] peerStrings = peersList.split(",");
+                        for(int i=0;i<peerStrings.length;i++){
+                            InetSocketAddress ipPort = new InetSocketAddress(InetAddress.getByName(peerStrings[i].split(":")[0]),Integer.parseInt(peerStrings[i].split(":")[1]));
+                            peer.peers.put(ipPort,peerStrings[i].split(":")[2]);
+                            peer.users.add(ipPort);
+                        }
+                        peer.gui.setMembers(new ArrayList<>(peer.peers.values()));
+                        //Handle client disconnects
+                    } else if(received.startsWith("DISCONNECT:")){
+                        String dcPeer = received.substring("DISCONNECT:".length());
+                        //Serialize packet
+                        String hostname = dcPeer.split(":")[0];
+                        int port = Integer.parseInt(dcPeer.split(":")[1]);
+                        String username = dcPeer.split(":")[2];
+                        InetSocketAddress ipPort = new InetSocketAddress(InetAddress.getByName(hostname),port);
+                        //Remove user information
+                        peer.peers.remove(ipPort);
+                        peer.users.remove(ipPort);
+                        peer.gui.removeMember(username);
+                        System.out.println("removed " +username);
                     } else {
                         // Handle other cases or unrecognized messages
                         System.out.println("Received unrecognized message: " + received);

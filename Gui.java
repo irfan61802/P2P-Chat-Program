@@ -67,6 +67,15 @@ public class Gui extends JFrame {
             memberListModel.addElement(member); // add each member to the list
         }
     }
+
+    public void addMember(String member){
+        memberListModel.addElement(member);
+    }
+
+    public void removeMember(String member){
+        memberListModel.removeElement(member);
+    }
+
     public JButton getSendButton(){
         return sendButton;
     }
